@@ -1,0 +1,26 @@
+# 一条命令跑起来：先构建沙箱镜像（make sandbox-image），再 docker compose up -d --build
+#
+# 编排服务通过挂载的 docker.sock 为每个项目起一个沙箱容器；沙箱在内部网络里，
+# 只能经白名单代理访问包管理源，看不到模型的 API Key 和这里的数据目录。
+services:
+  codeless:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+    image: codeless:latest
+    container_name: codeless
+    restart: unless-stopped
+    ports:
+      # 只监听本机。要给局域网用，改成 "8000:8000" 并在 .env 里设置 CODELESS_TRUSTED_HOSTS
+      - "127.0.0.1:${CODELESS_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CODELESS_PORT: "8000"
+      # 浏览器自检要从容器里访问 http://<项目>.localhost:8000，和用户看到的一致
+      PREVIEW_DOMAIN: localhost
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # 沙箱挂载工作区时要用宿主机路径，编排服务会从这条挂载自动推断
+      - ./data:/app/data
