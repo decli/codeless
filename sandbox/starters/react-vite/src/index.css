@@ -1,0 +1,21 @@
+:root {
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  line-height: 1.6;
+  color: #18181b;
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
