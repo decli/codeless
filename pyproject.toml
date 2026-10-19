@@ -1,0 +1,51 @@
+[project]
+name = "codeless"
+version = "1.0.0"
+description = "对话式编程 agent：在沙箱里写 Python / Node.js 程序、实时预览、自己修 bug，基座模型可配置"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "websockets>=12",
+    "openai>=1.40",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+# 预览自检用无头浏览器抓控制台报错和截图；不装也能用，退化为 HTTP 检查
+browser = ["playwright>=1.45"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+codeless = "codeless.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["codeless*"]
+
+[tool.setuptools.package-data]
+codeless = ["preview/*.js", "agent/*.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["poc", "web", "sandbox/starters"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["conftest", "fake_llm", "scenarios"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "docker: 需要 Docker 守护进程",
+    "browser: 需要 Playwright 浏览器",
+]
