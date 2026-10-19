@@ -1,4 +1,6 @@
-# 接入与启动指南
+# POC 接入与启动指南
+
+> 这是 v0 POC（Gitea + CI 发布链路）的启动说明。当前版本 v1 的部署见 [docs/07-deployment.md](../docs/07-deployment.md)。
 
 把 codeless 在一台机器上跑起来，接上你自己的大模型，然后用一句话做出一个能访问的网站。
 
@@ -234,7 +236,7 @@ printf '#!/bin/sh\ngit diff --cached | grep -qE "sk-[a-zA-Z0-9]{20,}" && { echo 
 
 **其他风险**
 
-- 编排服务挂载了宿主机的 `/var/run/docker.sock`，等于拥有宿主机 root 权限。这是本地验证的妥协，真上多租户必须换成 microVM 级隔离，见[技术方案](03-architecture.md)第 5.5 节。
+- 编排服务挂载了宿主机的 `/var/run/docker.sock`，等于拥有宿主机 root 权限。这是本地验证的妥协，真上多租户必须换成 microVM 级隔离，见[技术方案](../docs/03-architecture.md)第 5.5 节。
 - Gitea 的默认管理员密码 `codeless-poc-2026` 是明文写在脚本里的。只在本机用没关系，要改就在执行前设环境变量：`GITEA_PASSWORD=你的密码 sh infra/setup.sh`。
 - 生成的站点由 nginx 直接托管，没有鉴权，同一局域网内可以访问到。
 

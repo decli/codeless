@@ -1,8 +1,49 @@
 # codeless
 
-用户在网页上描述需求，平台在隔离沙箱里调用大模型完成编码、测试和修复，推送到 GitHub / GitLab，再由 CI/CD 产出制品或发布到 Pages。用户全程不需要打开 IDE。
+对话式编程 agent：用一句话描述想要的程序，codeless 在隔离沙箱里写代码、运行、实时预览，出了问题自己修，你随时插话改需求。支持 Python 和 Node.js，基座模型自己配置：DeepSeek、通义千问、Kimi、智谱、Claude、OpenAI、本地 Ollama 都能接。
 
-**当前阶段**：构想与可行性评估，尚无代码。本仓库目前只放需求、评估和技术方案文档，用于讨论和决策。
+## 能做什么
+
+- **写任意程序**：网页应用、小游戏、数据看板、Web 接口、命令行工具、数据处理脚本。内置 React + Vite、Express、FastAPI 起步模板。
+- **实时预览**：开发服务器跑在沙箱里，界面右侧直接看效果，热更新即时生效，可以切换手机宽度。
+- **自己发现并修复 bug**：每轮结束后系统检查进程、端口、页面资源和浏览器控制台，有问题自动交回 agent 修；你在预览里遇到的报错也能一键交给它。
+- **随时改**：agent 工作时可以插话补充要求，也可以立即停止；每轮自动保存检查点，可以查看改动、撤销本轮、恢复到任意版本。
+- **模型可配置**：OpenAI 兼容协议和 Anthropic 协议，多个模型随时切换，显示 token 用量和花费。
+- **安全隔离**：每个项目一个 Docker 沙箱，只能访问包管理源，看不到 API Key 和宿主机文件。
+
+## 快速开始
+
+需要 Docker 和一个支持工具调用的模型 API Key。
+
+```sh
+git clone https://github.com/decli/codeless.git
+cd codeless
+make sandbox-image            # 构建任务沙箱镜像（Python 3.12 + Node.js 22）
+docker compose up -d --build
+```
+
+打开 <http://localhost:8000>，在「设置 → 模型」里选一个服务商、填上 API Key，回到首页写下需求即可。
+
+本机开发、换源、环境变量、排查和安全须知见[部署与使用指南](docs/07-deployment.md)。
+
+## 开发
+
+```sh
+make install                  # 后端依赖装进 .venv，前端依赖装进 web/node_modules
+make run                      # 构建前端并启动 http://localhost:8000
+make test                     # 假模型 + 本地进程沙箱跑完整流程，不需要真实 API Key
+make test-all                 # 加上 Docker 沙箱和无头浏览器测试
+make lint
+```
+
+| 目录 | 内容 |
+|---|---|
+| `codeless/` | 编排服务：agent 循环、工具、模型适配、沙箱、预览代理与自检、接口 |
+| `web/` | 界面：React + TypeScript + Vite |
+| `sandbox/starters/` | 起步模板 |
+| `docker/` | 沙箱镜像和编排服务镜像 |
+| `tests/` | 单元测试和端到端测试，`fake_llm.py` 模拟两种协议的模型服务 |
+| `poc/` | v0 POC（需求 → 沙箱 → Gitea CI 发布），已归档 |
 
 ## 文档
 
@@ -10,37 +51,10 @@
 |---|---|
 | [需求说明](docs/01-requirements.md) | 愿景、目标用户、用户旅程、功能与非功能需求、MVP 范围 |
 | [可行性评估](docs/02-feasibility.md) | 结论、市场信号、按项目类型的可行度、主要挑战与对策、成本测算 |
-| [技术方案](docs/03-architecture.md) | 总体架构、核心流程、任务状态机、组件选型、安全设计、模板契约 |
+| [技术方案](docs/03-architecture.md) | 总体架构、核心流程、组件选型、安全设计 |
 | [路线图](docs/04-roadmap.md) | 分阶段计划、退出标准、核心指标 |
-| [决策记录](docs/05-decisions.md) | 提议中的架构决策，以及需要拍板的问题 |
-| [POC 验证结果](docs/06-poc-findings.md) | 实测数据、暴露的问题、和方案的对照 |
-| [接入与启动指南](docs/07-deployment.md) | 前置条件、一键启动、接入自己的模型、排查、清理、安全须知 |
-
-## 跑起来
-
-代码在 [`poc/`](poc/)，是一个能跑的最小实现。需要 Docker Desktop 和一个模型 API key（默认 DeepSeek，任何 OpenAI 兼容且支持 function calling 的服务都行）。
-
-```sh
-cd poc && cp .env.example .env    # 填入 LLM_API_KEY
-```
-
-```sh
-sh infra/setup.sh                 # 拉起全部服务，两三分钟
-```
-
-打开 <http://localhost:8000> 写一句需求即可。完整说明见[接入与启动指南](docs/07-deployment.md)。
-
-## 核心结论
-
-1. 技术上可行，同类链路已有多款产品验证过。难点不在把流水线串起来，而在成功率、成本和差异化。
-2. "全程零 IDE"只对模板化的小项目成立，比如静态站、前端应用、小工具、CLI，范围必须收窄。
-3. 主要挑战：项目一复杂 agent 就会卡住，而用户无力接手；测试是 agent 自己写的，通过不等于做对；需求难以说清；多租户安全；token 成本；同质化竞争。
-4. 建议先打通一条黄金路径（描述需求 → 前端应用 → GitHub Pages），用真实需求样本测出端到端成功率和单项目成本，再决定往哪里扩展。
-5. 差异化候选方向：企业私有化（接入自有 GitLab、使用国产模型）、垂直场景、AI 加人工兜底的交付服务。
-
-## 下一步
-
-技术路线已经用 [`poc/`](poc/) 跑通了（三个任务全绿，单次成本约半分钱，细节见 [POC 验证结果](docs/06-poc-findings.md)）。接下来两件事并行：
-
-1. 回答[决策记录](docs/05-decisions.md)里的 Q-01（目标市场）和 Q-02（首要用户）。
-2. 按 [POC 验证结果](docs/06-poc-findings.md)第 5 节加难度做评测集，测出真实成功率。
+| [决策记录](docs/05-decisions.md) | 架构决策和待拍板的问题 |
+| [POC 验证结果](docs/06-poc-findings.md) | v0 实测数据、暴露的问题 |
+| [部署与使用指南](docs/07-deployment.md) | 前置条件、启动、配置模型、环境变量、排查、安全须知 |
+| [行业 agent 调研](docs/08-agent-research.md) | Claude Code、Codex 等产品和成熟 agent 能力体系，codeless 的差距与优先级 |
+| [v1 设计](docs/09-v1-design.md) | 架构、agent 循环、能力对照、关键决策 |
