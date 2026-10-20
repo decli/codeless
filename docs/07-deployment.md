@@ -118,7 +118,33 @@ data/
 
 备份就是拷贝这个目录。项目代码可以在界面上打包下载，也可以直接到 `workspace/` 里用 git 查看。
 
-## 8. 排查
+## 8. 代码怎么保存
+
+每个项目的 `workspace/` 是一个独立的 git 仓库，codeless 在宿主侧替你提交，agent 和沙箱都碰不到提交操作：
+
+| 时机 | 提交说明 |
+|---|---|
+| 每一轮结束：agent 停下、自检和自动修复都跑完之后 | 这一轮的需求，截取前 60 个字 |
+| 你在「代码」页手动改了文件，下一轮开始前 | `手动修改` |
+| 恢复到某个检查点、或者「撤销本轮」 | `恢复到「…」`，作为一个新提交，之前的历史都还在 |
+
+几点说明：
+
+- 自检没通过、你中途停止、模型报错的那一轮也会提交，这样改到一半的代码不会丢；这一轮的结果在对话里的轮次结尾标出来，不满意可以「撤销本轮」。
+- 没有改动的轮次不会产生提交。`node_modules`、`dist`、`__pycache__` 之类的依赖和构建产物在 `.gitignore` 里，不会提交。
+- 提交只在本地，**不会推送到任何远程仓库**（GitHub、GitLab、Gitea 都不会）。要放到远程，自己加一个 remote 推上去：
+
+  ```sh
+  cd data/projects/<项目 id>/workspace
+  git remote add origin https://github.com/<你>/<仓库>.git
+  git push -u origin main
+  ```
+
+  用 Docker Compose 运行时，数据目录就是仓库根目录下的 `./data`，里面的文件属于容器里的 root 用户；git 提示 `dubious ownership` 时，按提示执行 `git config --global --add safe.directory <workspace 路径>`。
+
+- 界面上的「下载源码」是不带 git 历史的 zip；要带历史就直接复制或 `git clone` 这个 `workspace/` 目录。
+
+## 9. 排查
 
 | 现象 | 处理 |
 |---|---|
@@ -130,7 +156,7 @@ data/
 
 查看编排服务日志：`docker compose logs -f codeless`。
 
-## 9. 清理
+## 10. 清理
 
 ```sh
 docker compose down
@@ -140,7 +166,7 @@ docker network rm codeless-sandbox
 
 删除项目在界面上操作，会同时删除它的沙箱容器和文件。
 
-## 10. 安全须知
+## 11. 安全须知
 
 - 编排服务通过 `docker.sock` 管理沙箱，等于拥有宿主机的 root 权限。只在自己的机器或受信任的服务器上部署，不要把 8000 端口直接暴露到公网。
 - 沙箱是普通容器：内部网络、只能经白名单代理出网、限制 CPU 和内存、看不到 API Key 和数据目录。它适合自用和小团队，**不是多租户级别的隔离**；对外提供服务需要换成 gVisor 或 microVM，见[技术方案](03-architecture.md)。
